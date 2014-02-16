@@ -1,0 +1,4 @@
+cd /home/xyyangkun/firewall-over/src
+del client.cpp
+put ../src/client.cpp
+quit

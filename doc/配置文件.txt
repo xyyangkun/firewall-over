@@ -1,0 +1,7 @@
+1、客户端配置文件：
+{
+"serverip"	:	"5.175.169.88"		#服务器的ip
+"serverport":	"8001"				#服务器的端口
+"username"	:	"yangkun"
+"passwd"	:	"123456"
+}

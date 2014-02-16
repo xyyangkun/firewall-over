@@ -1,0 +1,4 @@
+cd /home/xy
+del server
+put ../server
+quit
