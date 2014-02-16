@@ -5,3 +5,14 @@
 "username"	:	"yangkun"
 "passwd"	:	"123456"
 }
+
+
+2、服务端：
+{
+	userlist:	[
+	{"username":"yangkun",	"passwd":"123456"},
+	{"username":"test1",	"passwd":"123456"},
+	{"username":"test2",	"passwd":"123456"}
+	]
+
+}

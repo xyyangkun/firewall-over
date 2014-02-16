@@ -19,8 +19,10 @@ LIBS = -ludt  -lpthread
 LDLIBS=$(LIBDIR) $(LIBS)
 
 #编译选项
-CXXFLAGS= $(INCLUDE) $(LDLIBS)
-CFLAGS=   $(INCLUDE) $(LDLIBS)
+CXXFLAGS=-g
+CXXFLAGS+= $(INCLUDE) $(LDLIBS) 
+CFLAGS=-g
+CFLAGS+=   $(INCLUDE) $(LDLIBS)
 
 #目标
 all: server client

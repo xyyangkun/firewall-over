@@ -3,10 +3,13 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "wrap.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include "wrap.h"
+#include "cJSON.h"
+//服务器配置
+#define SERVER_CONFIG "json_server.txt"
 
 pthread_t ntid;
 #define SERV_PORT 8001
@@ -23,7 +26,39 @@ socklen_t cliaddr_len;
 int sockfd;
 char str[INET_ADDRSTRLEN];
 int i, n;
-
+/***************************************************************************
+ * 功能：从json中由用户名获取密码
+ * 返回：0有值，非0没有值
+ ***************************************************************************/
+int get_user(char *username,char *passwd)
+{
+	int ret=0;
+	FILE *f=fopen(SERVER_CONFIG,"rb");fseek(f,0,SEEK_END);long len=ftell(f);fseek(f,0,SEEK_SET);
+	char *data=(char*)malloc(len+1);fread(data,1,len,f);fclose(f);
+	//printf("data:%s",data);
+	cJSON *json=cJSON_Parse(data);
+	free(data);
+	//printf("d1 %s\n",cJSON_Print(json));
+	cJSON *userlist=cJSON_GetObjectItem(json,"userlist");
+	int i;
+	int size=cJSON_GetArraySize(userlist);
+	for(i=0; i<size; i++)
+	{
+		cJSON *tmp=cJSON_GetArrayItem(userlist,i);
+		char *str=cJSON_GetObjectItem(tmp,"username")->valuestring;
+		//printf("username:%s,,,%s,,,%d,,,%d\n",username,str,strlen(username),strlen(str));
+		if( 0 == memcmp(str,username,strlen(username) ))
+		{
+			char *str_tmp=cJSON_GetObjectItem(tmp,"passwd")->valuestring;
+			memcpy(passwd, str_tmp, strlen(str_tmp));
+			//printf("str_tmp:%s\n",str_tmp);
+			cJSON_Delete(json);
+			return 0;
+		}
+	}
+	cJSON_Delete(json);
+	return -1;
+}
 void *thr_fn(void *arg)
 {
 printf(arg);
@@ -58,6 +93,21 @@ printf(arg);
 
 int main(void)
 {
+	if(access(SERVER_CONFIG,0)!=0)
+	{
+		printf("%s is not existen\n",SERVER_CONFIG);
+		exit(1);
+	}
+	//printf("existen\n");
+	char *username="yangkun";
+	char pw[20]={0};
+	if(0!=get_user(username,pw))
+	{
+		printf("username is not in");
+		exit(1);
+	}
+	printf("pw: %s\n",pw);
+	return 0;
 	memset(&a, 0, sizeof(struct b));
 	memset(&a1, 0, sizeof(struct b));
 	memset(&a2, 0, sizeof(struct b));
