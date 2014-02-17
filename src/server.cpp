@@ -3,6 +3,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -59,9 +60,28 @@ int get_user(char *username,char *passwd)
 	cJSON_Delete(json);
 	return -1;
 }
+/***************************************************************************
+ * 功能：从json中获取数据端口
+ * 返回：0有值，非0没有值
+ ***************************************************************************/
+int get_port(int *port)
+{
+	int ret=0;
+	FILE *f=fopen(SERVER_CONFIG,"rb");fseek(f,0,SEEK_END);long len=ftell(f);fseek(f,0,SEEK_SET);
+	char *data=(char*)malloc(len+1);fread(data,1,len,f);fclose(f);
+	//printf("data:%s",data);
+	cJSON *json=cJSON_Parse(data);
+	free(data);
+	//printf("d1 %s\n",cJSON_Print(json));
+	int port1=cJSON_GetObjectItem(json,"port")->valueint;
+	//printf("port: %d\n",port1);
+	*port=port1;
+	cJSON_Delete(json);
+	return -1;
+}
 void *thr_fn(void *arg)
 {
-printf(arg);
+//printf(arg);
 	while(1)
 	{
 		printf("111\n");
@@ -107,7 +127,14 @@ int main(void)
 		exit(1);
 	}
 	printf("pw: %s\n",pw);
+
+	int port;
+	get_port(&port);
+	printf("port:%d\n",port);
 	return 0;
+
+
+
 	memset(&a, 0, sizeof(struct b));
 	memset(&a1, 0, sizeof(struct b));
 	memset(&a2, 0, sizeof(struct b));
@@ -125,7 +152,8 @@ int main(void)
 	Bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
 	int err;
-	err = pthread_create(&ntid, NULL, thr_fn, "new thread: ");
+	char *p="new thread: ";
+	err = pthread_create(&ntid, NULL, thr_fn, p);
 	if (err != 0) {
 			fprintf(stderr, "can't create thread: %s\n", strerror(err));
 			exit(1);
@@ -150,13 +178,13 @@ printf("d1\n");
 			memcpy(&b1,&cliaddr,cliaddr_len);
 			a1.port=ntohs(cliaddr.sin_port);
 			memcpy(&a1.ip,&cliaddr.sin_addr,4);
-			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa(a1.ip),a1.port);
+			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa( *(struct in_addr *)&(a1.ip)),a1.port);
 		}else
 		{
 			memcpy(&b2,&cliaddr,cliaddr_len);
 			a2.port=ntohs(cliaddr.sin_port);
 			memcpy(&a2.ip,&cliaddr.sin_addr,4);
-			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa(a2.ip),a2.port);
+			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa(*(struct in_addr *)&(a2.ip)),a2.port);
 		}
 		a.port=6666;
 

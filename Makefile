@@ -41,8 +41,8 @@ cJSON.c:cJSON.h
 
 server:$(OUT)/server.o $(CPPOBJS)
 	$(LINK) $@ $< $(CPPOBJS) $(CXXFLAGS) 	
-$(OUT)/server.o: $(SRCDIR)/server.c
-	$(CC) -c $< -o $@ $(CFLAGS)
+$(OUT)/server.o: $(SRCDIR)/server.cpp
+	$(CXX) -c $< -o $@ $(CFLAGS)
 
 
 client:$(OUT)/client.o $(CPPOBJS)
