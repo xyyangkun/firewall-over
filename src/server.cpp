@@ -9,8 +9,12 @@
 #include <unistd.h>
 #include "wrap.h"
 #include "cJSON.h"
+#include "exchange_data.h"
+#include "Checkclientalive.h"
 //服务器配置
 #define SERVER_CONFIG "json_server.txt"
+
+
 
 pthread_t ntid;
 #define SERV_PORT 8001
@@ -110,14 +114,17 @@ void *thr_fn(void *arg)
 	}
 	return NULL;
 }
-
+//检查客户端的生存时间，如果没时间了就删除之。
+void *thr_check_client_alive(void *arg);
 int main(void)
 {
+	int err;
 	if(access(SERVER_CONFIG,0)!=0)
 	{
 		printf("%s is not existen\n",SERVER_CONFIG);
 		exit(1);
 	}
+#if 0
 	//printf("existen\n");
 	char *username="yangkun";
 	char pw[20]={0};
@@ -132,14 +139,29 @@ int main(void)
 	get_port(&port);
 	printf("port:%d\n",port);
 	return 0;
+#endif
 
+	Check_client_alive cca;
+	//创建检测线程
+	err = pthread_create(&ntid, NULL, thr_check_client_alive, &cca);
+	if (err != 0) {
+			fprintf(stderr, "can't create thread: %s\n", strerror(err));
+			exit(1);
+	}
+	cca.add_user("yangkun");
+	while(1)
+	{
+		printf("size: %d\n",cca.size());
+		sleep(1);
+		printf("debug!!\n");
+	}
+	return 0;
 
-
-	memset(&a, 0, sizeof(struct b));
+/*	memset(&a, 0, sizeof(struct b));
 	memset(&a1, 0, sizeof(struct b));
 	memset(&a2, 0, sizeof(struct b));
 	a1.port=6666;
-	a2.port=6666;
+	a2.port=6666;*/
 
 
 	sockfd = Socket(AF_INET, SOCK_DGRAM, 0);
@@ -148,10 +170,10 @@ int main(void)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	servaddr.sin_port = htons(SERV_PORT);
-    
+
 	Bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
-	int err;
+
 	char *p="new thread: ";
 	err = pthread_create(&ntid, NULL, thr_fn, p);
 	if (err != 0) {
@@ -189,4 +211,11 @@ printf("d1\n");
 		a.port=6666;
 
 	}
+}
+
+
+void *thr_check_client_alive(void *arg)
+{
+	Check_client_alive *cca=static_cast< Check_client_alive * >(arg);
+	cca->check();
 }

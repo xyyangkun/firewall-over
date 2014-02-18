@@ -33,9 +33,10 @@ $(OUT)/%.o:$(SRCDIR)/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 CPPOBJS = 
-CPPOBJS=$(OUT)/wrap.o $(OUT)/cJSON.o
+CPPOBJS=$(OUT)/wrap.o $(OUT)/cJSON.o $(OUT)/Checkclientalive.o
 wrap.c:wrap.h
 cJSON.c:cJSON.h
+Checkclientalive.cpp:Checkclientalive.h
 
 
 
