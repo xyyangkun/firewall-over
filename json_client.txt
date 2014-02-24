@@ -1,6 +1,6 @@
 {
-"serverip"	:	"5.175.169.88"		#服务器的ip
-"serverport":	"8001"				#服务器的端口
-"username"	:	"yangkun"
+"serverip"	:	"127.0.0.1",
+"serverport":	8001,
+"username"	:	"yangkun",
 "passwd"	:	"123456"
 }

@@ -11,6 +11,7 @@
 #include "cJSON.h"
 #include "exchange_data.h"
 #include "Checkclientalive.h"
+#include "crc.h"
 //服务器配置
 #define SERVER_CONFIG "json_server.txt"
 
@@ -124,7 +125,7 @@ int main(void)
 		printf("%s is not existen\n",SERVER_CONFIG);
 		exit(1);
 	}
-#if 0
+
 	//printf("existen\n");
 	char *username="yangkun";
 	char pw[20]={0};
@@ -138,9 +139,9 @@ int main(void)
 	int port;
 	get_port(&port);
 	printf("port:%d\n",port);
-	return 0;
-#endif
 
+
+#if 1
 	Check_client_alive cca;
 	//创建检测线程
 	err = pthread_create(&ntid, NULL, thr_check_client_alive, &cca);
@@ -148,20 +149,15 @@ int main(void)
 			fprintf(stderr, "can't create thread: %s\n", strerror(err));
 			exit(1);
 	}
-	cca.add_user("yangkun");
-	while(1)
+	//cca.add_user("yangkun");
+/*	while(1)
 	{
 		printf("size: %d\n",cca.size());
 		sleep(1);
 		printf("debug!!\n");
-	}
-	return 0;
-
-/*	memset(&a, 0, sizeof(struct b));
-	memset(&a1, 0, sizeof(struct b));
-	memset(&a2, 0, sizeof(struct b));
-	a1.port=6666;
-	a2.port=6666;*/
+	}*/
+	//return 0;
+#endif
 
 
 	sockfd = Socket(AF_INET, SOCK_DGRAM, 0);
@@ -169,46 +165,168 @@ int main(void)
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port = htons(SERV_PORT);
+	servaddr.sin_port = htons(port);
 
 	Bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
 
-	char *p="new thread: ";
-	err = pthread_create(&ntid, NULL, thr_fn, p);
-	if (err != 0) {
-			fprintf(stderr, "can't create thread: %s\n", strerror(err));
-			exit(1);
-	}
+
+
+
+
+
+
+
+
+
+
+
+	M_heartbeat mh ;
+	memset(&mh, 0, sizeof(mh));
+	memcpy(mh.M_HEADRTBEAT_HEAD, M_HEARTBEAT_HEAD,4);
+	sprintf(mh.username,"yangkun");
+	sprintf(mh.passwd, "123456");
+	mh.tmp1=0;
+	mh.tmp2=0;
+	mh.crc=0;
+	unsigned int crc=crc32((unsigned char *)&mh, sizeof(M_heartbeat));
+	printf("crc1:%#X\n",crc);
+	mh.crc=crc;
+
+
+	unsigned char buf[100];
+	cliaddr_len = sizeof(cliaddr);
 	printf("Accepting connections ...\n");
 	while (1) {
-		if((a1.port!=6666)&&(a2.port!=6666))continue;
-
-		cliaddr_len = sizeof(cliaddr);
-		/*   收客户端地址   */
-		n = recvfrom(sockfd, (char *)&a, sizeof(struct b), 0, (struct sockaddr *)&cliaddr, &cliaddr_len);
+		memset(buf, 0, sizeof(buf));
+		/*   收客户端地址　和　数据包头*/
+		n = recvfrom(sockfd, buf, sizeof(M_heartbeat), 0, \
+				(struct sockaddr *)&cliaddr, &cliaddr_len);
 		if (n == -1)
+		{
 			perr_exit("recvfrom error");
+			continue;
+		}
+
+		//打印对方发送数据包的客户端 ip 和　port
 		printf("received from %s at PORT %d\n",\
 		       inet_ntop(AF_INET, &cliaddr.sin_addr, str, sizeof(str)),
 		       ntohs(cliaddr.sin_port));
-		if(a.port!=5555)
-			printf("protel err\n");
-printf("d1\n");
-		if(a.num==1)
+
+		//判断数据头的类型
+		if( 0 == memcmp(&buf, M_HEARTBEAT_HEAD, 4))
 		{
-			memcpy(&b1,&cliaddr,cliaddr_len);
-			a1.port=ntohs(cliaddr.sin_port);
-			memcpy(&a1.ip,&cliaddr.sin_addr,4);
-			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa( *(struct in_addr *)&(a1.ip)),a1.port);
-		}else
-		{
-			memcpy(&b2,&cliaddr,cliaddr_len);
-			a2.port=ntohs(cliaddr.sin_port);
-			memcpy(&a2.ip,&cliaddr.sin_addr,4);
-			printf("\t\t num=%d,ip=%s,port=%d\n",a.num,inet_ntoa(*(struct in_addr *)&(a2.ip)),a2.port);
+			/*心跳*/
+			M_heartbeat *mhb=(M_heartbeat *)buf;
+			printf("username：%s, passwd: %s\n",mhb->username,mhb->passwd);
+			//1、校验crc
+			unsigned int crc_tmp=mhb->crc;
+			mhb->crc=0;
+			unsigned int crc=crc32((unsigned char *)buf, sizeof(M_heartbeat));
+			if(crc!=crc_tmp)
+			{
+				printf(" crc error,getcrc:%#X, recv crc:%#X\n",\
+						crc,crc_tmp);
+				continue;
+			}
+			//2、检查用户名密码是不是正确，如果正确，把这个用户加入队列里面，同时返回数据
+			char pw[20]={0};
+			if(0!=get_user(mhb->username,pw))
+			{
+				printf("username is not in");
+				exit(1);
+			}
+			printf("pw: %s\n",pw);
+			if( 0!= memcmp(pw, mhb->passwd, 20))
+			{
+				//密码不正确，就不返回了
+				printf("passwd is wrong!!\n");
+				continue;
+			}
+			else
+			{
+				printf("size: %d\n",cca.size());
+				//密码正确
+				//查看这个用户是不是在队列中
+				if( 0!=cca.is_in(mhb->username) )
+				{
+					printf("new user: %s\n",mhb->username);
+					cca.add_user(mhb->username,(int)cliaddr.sin_addr.s_addr,(int)cliaddr.sin_port);
+				}
+				else
+				{
+					printf("the user %s is in\n",mhb->username);
+					cca.add_user_time(mhb->username,(int)cliaddr.sin_addr.s_addr,(int)cliaddr.sin_port);
+				}
+				printf("debug!!!\n");
+				unsigned int addr,port;
+				cca.get_user_info(mhb->username,addr,port);
+				printf("the add: %s, port:%d \n",\
+						inet_ntop(AF_INET, &addr, str, sizeof(str)),
+					       ntohs(port));
+				//把密码位置0，准备返回数据
+				memset(mhb->passwd, 0, 20);
+				crc=crc32((unsigned char *)buf, sizeof(M_heartbeat));
+				mhb->crc=crc;
+				n = sendto(sockfd, mhb, sizeof(M_heartbeat), 0, (struct sockaddr *)&cliaddr, cliaddr_len);
+				if (n == -1)
+					perr_exit("sendto error");
+				printf("send ok\n");
+			}
 		}
-		a.port=6666;
+		else if( 0 == memcmp(&buf, M_QUERY_ONLINE_HEAD, 4))
+		{
+			/*查询另一个客户端是不是在线*/
+			M_query_online *mqo=(M_query_online *)buf;
+			printf("username_me：%s,username_you：%s \n",mqo->username_me,mqo->username_he);
+			//1、校验crc
+			unsigned int crc=mqo->crc;
+			mqo->crc=0;
+			if(crc!=crc32((unsigned char *)buf, sizeof(M_heartbeat)))
+			{
+				printf(" crc error:\n");
+				continue;
+			}
+			//2、判断其来的ip和端口是不是正确，如果正确,返回数据
+			unsigned int addr,port;
+			err=cca.get_user_info(mqo->username_me,addr,port);
+			if(err<0)
+			{
+				printf("1can't find the user:%s\n",mqo->username_me);
+			}
+			if(addr != cliaddr.sin_addr.s_addr )
+			{
+				printf("query addr error!! you from: %#X, you saved: %#X\n",\
+						cliaddr.sin_addr.s_addr,addr);
+				continue;
+			}
+			if( port != cliaddr.sin_port )
+			{
+				printf("query port error!!\n");
+				continue;
+			}
+			//填充查询的信息
+			err=cca.get_user_info(mqo->username_he,mqo->addr,mqo->port);
+			if(err<0)
+			{
+				printf("2can't find the user:%s\n",mqo->username_he);
+				mqo->addr=0;
+				mqo->port=0;
+			}
+			crc=crc32((unsigned char *)buf, sizeof(M_query_online));
+			mqo->crc=crc;
+			n = sendto(sockfd, mqo, sizeof(M_query_online), 0, (struct sockaddr *)&cliaddr, cliaddr_len);
+			if (n == -1)
+				perr_exit("sendto error");
+			printf("send ok\n");
+		}
+		else
+		{
+			/*错误处理*/
+			printf("error head: %#X %#X %#X %#X \n",buf[0], buf[1], buf[2], buf[3]);
+		}
+
+
 
 	}
 }

@@ -31,6 +31,8 @@ typedef struct
 	char M_HEADRTBEAT_HEAD[4];	//这种类型的数据的数据头
 	char username[NAME_LENGTH];
 	char passwd[PASSWD_LENGTH];
+	unsigned int tmp1;			//无用，主要是对齐
+	unsigned int tmp2;			//无用，主要是对齐
 	unsigned int crc;			//这段数据的crc值
 }M_heartbeat;
 //通过用户名查询其是否在线
@@ -39,6 +41,8 @@ typedef struct
 typedef struct
 {
 	char M_QUERY_ONLINE_HEAD[4];		//这种类型的数据的数据头
+	char username_me[NAME_LENGTH];		//自已的用户名
+	char username_he[NAME_LENGTH];		//要查询的用户名
 	unsigned int addr;			//对方的ip
 	unsigned int port;			//对方的端口，用低2个字节
 	unsigned int crc;			//这段数据的crc值
