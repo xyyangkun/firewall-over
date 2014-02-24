@@ -1,0 +1,6 @@
+库udt
+libudt.a udt.h
+
+库log4c,日志库
+cp log4c-1.2.4/src/log4c/.libs/liblog4c.a ../lib/
+cp log4c-1.2.4/src/log4c.h ../include/

@@ -9,13 +9,14 @@ LIBRARY_LINK=$(CROSS)ar cr
 OUT=./OUT
 SRCDIR=./src
 
+LOG4C=$(PWD)/extern_lib/log4c-1.2.4
 #头文件
-INCLUDE= -I ./include
+INCLUDE= -I ./include -I$(LOG4C)/src/
 
 
 #库文件
-LIBDIR= -L./lib
-LIBS = -ludt  -lpthread
+LIBDIR= -L./lib -L$(LOG4C)/src/log4c/.libs/
+LIBS = -ludt  -lpthread -llog4c
 LDLIBS=$(LIBDIR) $(LIBS)
 
 #编译选项
@@ -54,4 +55,7 @@ $(OUT)/client.o: $(SRCDIR)/client.cpp
 
 clean:
 	rm $(OUT)/*
+	
+ex:
+	export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(PWD)/extern_lib/log4c-1.2.4/src/log4c/.libs/
 

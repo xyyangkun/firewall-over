@@ -8,6 +8,8 @@
 #ifndef EXCHANGE_DATA_H_
 #define EXCHANGE_DATA_H_
 /***********************************************************************************
+ * 此文件中所有结构的大小都为56!!!
+ *
  * 1、客户端向服务器通信(带crc)：
  * 		a、M_heartbeat	心跳，可以让服务器获取自己的ip和端口
  * 		b、知道对方用户名，查询对方是否在线发送数据；服务器返回数据
@@ -18,6 +20,7 @@
  *
  *
  ***********************************************************************************/
+#define EXCHANGE_DATA_LENGTH 56
 #define NAME_LENGTH  	20			//用户名最长20个字节
 #define PASSWD_LENGTH	20			//  密码最长20个字节
 const char M_HEARTBEAT_HEAD[4]		=	{0xaa, 0x55, 0xa5, 0x5a};
@@ -52,7 +55,10 @@ typedef struct
 typedef struct
 {
 	char M_SAY_HELLO_HEAD[4];		//这种类型的数据的数据头
+	char username_me[NAME_LENGTH];		//自已的用户名
+	char username_you[NAME_LENGTH];		//对方的用户名
 	char say_hello[8];				//hello
+	unsigned int crc;			//这段数据的crc值
 }M_say_hello;
 
 #endif /* EXCHANGE_DATA_H_ */

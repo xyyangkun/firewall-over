@@ -1,0 +1,13 @@
+１、服务端要加入日志,服务端要用守护进程daemon
+
+#include <syslog.h>
+int main(int argc, char *argv[])
+{
+    openlog("testsyslog", LOG_CONS | LOG_PID, 0);
+    syslog(LOG_USER | LOG_INFO, "syslog test message generated in program %s \n", argv[0]);
+    closelog();
+    return 0;
+}
+
+
+2、客户端要用平常的那种日志就可以吧。
