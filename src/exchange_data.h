@@ -50,6 +50,13 @@ typedef struct
 	unsigned int port;			//对方的端口，用低2个字节
 	unsigned int crc;			//这段数据的crc值
 }M_query_online;
+typedef enum
+{
+	start	= 0,
+	busy	= 1,
+	idle	= 2
+}M_client_state;
+
 
 //客户端与客户端通信(知道用户名，且查到对方在线后，与对方联系)
 typedef struct
@@ -57,7 +64,8 @@ typedef struct
 	char M_SAY_HELLO_HEAD[4];		//这种类型的数据的数据头
 	char username_me[NAME_LENGTH];		//自已的用户名
 	char username_you[NAME_LENGTH];		//对方的用户名
-	char say_hello[8];				//hello
+	M_client_state state;
+	char say_hello[7];				//hello
 	unsigned int crc;			//这段数据的crc值
 }M_say_hello;
 
