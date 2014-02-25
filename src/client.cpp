@@ -108,9 +108,10 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		choice=0;
-		printf("input the function: \n\t1、query user\n\t2、chat to the user!!");
+		printf("input the function: \n\t1、query user\n\t2、chat to the user!!\n");
 		scanf("%d",&choice);
 		printf("you input choice: %d\n",choice);
+		while(mcs == busy)sleep(1);
 		if(choice==1)
 		{
 			printf("please input the user you want query!!\n");
@@ -160,8 +161,9 @@ int main(int argc, char *argv[])
 			msh.crc = crc;
 			struct sockaddr_in  addr;
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(qui.ip);
-			addr.sin_port = htons(qui.port);
+			addr.sin_addr.s_addr = qui.ip;
+			addr.sin_port =qui.port;
+			printf("size: %d , crc:%#X\n",sizeof(msh),msh.crc);
 			int n = sendto(sockfd, &msh, sizeof(msh), 0, (struct sockaddr *)&(addr), sizeof(struct sockaddr ));
 			if (n == -1)
 			{
@@ -278,10 +280,10 @@ void *thr_listen_frineds(void *arg)
 
 
 		//打印对方发送数据包的客户端 ip 和 port
-		printf("received from %s at PORT %d\n",\
-		       inet_ntop(AF_INET, &cliaddr.sin_addr, str, sizeof(str)),
+		//printf("received from %s at PORT %d\n",\
+		       inet_ntop(AF_INET, &cliaddr.sin_addr, str, sizeof(str)),\
 		       ntohs(cliaddr.sin_port));
-		printf("head: %#X %#X %#X %#X \n",\
+		//printf("head: %#X %#X %#X %#X \n",\
 							recvbuf[0], recvbuf[1], recvbuf[2], recvbuf[3]);
 		//判断数据头的类型
 		if( 0 == memcmp(&recvbuf, M_HEARTBEAT_HEAD, 4))
@@ -305,9 +307,9 @@ void *thr_listen_frineds(void *arg)
 		else if( 0 == memcmp(&recvbuf, M_QUERY_ONLINE_HEAD, 4))
 		{
 			/*查询另一个客户端是不是在线*/
-			printf("query!!!!\n");
+			//printf("query!!!!\n");
 			M_query_online *mqo=(M_query_online *)recvbuf;
-			printf("username_me：%s,username_you：%s \n",mqo->username_me,mqo->username_he);
+			//printf("username_me：%s,username_you：%s \n",mqo->username_me,mqo->username_he);
 			//1、校验crc
 			unsigned int crc=mqo->crc;
 			mqo->crc=0;
@@ -332,14 +334,15 @@ void *thr_listen_frineds(void *arg)
 			unsigned int crc_tmp=msh->crc;
 			msh->crc=0;
 			unsigned int crc=crc32((unsigned char *)recvbuf, sizeof(M_say_hello));
+			msh->crc=crc_tmp;
 			if(crc!=crc_tmp)
 			{
-				mylog_log(LOG4C_PRIORITY_ERROR," crc error,getcrc:%#X, recv crc:%#X\n",\
+				printf(" crc error,getcrc:%#X, recv crc:%#X\n",\
 						crc,crc_tmp);
 				continue;
 			}
 			//crc正确
-			mylog_log(LOG4C_PRIORITY_DEBUG,"me：%s, you: %s\n",msh->username_me,msh->username_you);
+			printf("me：%s, you: %s\n",msh->username_me,msh->username_you);
 			//bug-fix 先不测用户名了
 
 
@@ -348,13 +351,13 @@ void *thr_listen_frineds(void *arg)
 			if(msh->state == busy && mcs == idle)
 			{
 				//对方忙，我不忙           这种情况是我先联系对方的，这种情况不处理
-				mylog_log(LOG4C_PRIORITY_DEBUG,"he is busy,but I am idel");
+				printf("he is busy,but I am idel");
 				continue;
 			}
 			else if(msh->state == idle && mcs == busy)
 			{
 				//对方不忙，我忙           这种情况是对方查到我，对方先联系我的，要回复我忙
-				mylog_log(LOG4C_PRIORITY_DEBUG,"he is idel,but I am busy");
+				printf("he is idel,but I am busy");
 				msh->state = busy;
 
 				// bugfix 暂时不考虑用户名
@@ -367,15 +370,21 @@ void *thr_listen_frineds(void *arg)
 			else if(msh->state == busy && mcs == busy)
 			{
 				//对方忙，我也忙   这种不会发生！！！！
-				mylog_log(LOG4C_PRIORITY_ERROR,"he is busy,and I am busy");
+				printf("he is busy,and I am busy");
 				continue;
 			}
 			else if(msh->state == idle && mcs == idle)
 			{
 				//对方不忙，我也不忙         这种情况是一般的正常情况，应该把自己置成忙，同时建立新的socket给系统，以替换现在的socket
-				mylog_log(LOG4C_PRIORITY_DEBUG,"he is idle,and I am idle too!");
+				printf("he is idle,and I am idle too!");
 				mcs = busy;
 				qui.socket = sockfd;
+				//给对方返回
+				n = sendto(sockfd, &recvbuf, sizeof(recvbuf), 0, (struct sockaddr *)&cliaddr, cliaddr_len);
+				if (n == -1)
+				{
+					mylog_log(LOG4C_PRIORITY_ERROR,"sendto error:%s\n",strerror(errno));
+				}
 				//新建一个udp的socket
 				sockfd = Socket(AF_INET, SOCK_DGRAM, 0);
 				if(sockfd<=0)
@@ -384,6 +393,7 @@ void *thr_listen_frineds(void *arg)
 					perr_exit("socket:");
 					exit(1);
 				}
+
 				//通知创建成功，并开始聊天
 				//创建客户端与客户端之间的聊天线程
 				printf("create chat!!!\n\n");
@@ -421,11 +431,15 @@ void *thr_chat_frineds(void *arg)
 	printf("ddddddddd\n\n");
 	struct query_user_info user_info;
 	memcpy(&user_info, arg, sizeof(query_user_info));
+	char s[16];
+	printf("char ip %s port %d\n",\
+			inet_ntop(AF_INET, &(user_info.ip), s, sizeof(s)),
+			ntohs(user_info.port));
 	string str;
 	char buf[1500];
 	while(1)
 	{
-		cout << "input quit you can exit!and the other message will send to your friends!" << endl;
+		cout << "input quit you can exit!and the other message will send to your friends:" << endl;
 		cin>>str;
 		if(str=="quie")
 		{
@@ -433,22 +447,28 @@ void *thr_chat_frineds(void *arg)
 			break;
 		}
 		// bugfix 暂时不考虑用户名
-		int n = sendto(sockfd, str.c_str(), str.size(), 0, (struct sockaddr *)&user_info.ip, sizeof(struct sockaddr));
+		struct sockaddr_in  addr;
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = user_info.ip;
+		addr.sin_port =user_info.port;
+		int n = sendto(user_info.socket, str.c_str(), str.size(), 0, (struct sockaddr *)&(addr), sizeof(struct sockaddr ));
 		if (n == -1)
 		{
 			mylog_log(LOG4C_PRIORITY_ERROR,"sendto error:%s\n",strerror(errno));
 		}
 
 		//接收
-		struct sockaddr_in addr;
 		socklen_t addr_len=sizeof(addr);
-		n = recvfrom(sockfd, &buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addr_len);
+		memset(buf, 0, sizeof(buf));
+		memset(&addr, 0, sizeof(addr));
+		n = recvfrom(user_info.socket, &buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addr_len);
 		if (n == -1)
 		{
 			mylog_log(LOG4C_PRIORITY_ERROR,"recvfrom error:%s\n",strerror(errno));
 		}
+		printf("recv buf: %s \n",buf);
 		char s[16];
-		printf("received from %s at PORT %d\n",\
+		printf("11received from %s at PORT %d\n",\
 				inet_ntop(AF_INET, &addr.sin_addr, s, sizeof(s)),
 				ntohs(addr.sin_port));
 

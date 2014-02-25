@@ -52,10 +52,10 @@ typedef struct
 }M_query_online;
 typedef enum
 {
-	start	= 0,
-	busy	= 1,
-	idle	= 2
-}M_client_state;
+	start	= (unsigned char) 0,
+	busy	= (unsigned char)1,
+	idle	= (unsigned char)2
+}M_client_state ;
 
 
 //客户端与客户端通信(知道用户名，且查到对方在线后，与对方联系)
@@ -64,9 +64,9 @@ typedef struct
 	char M_SAY_HELLO_HEAD[4];		//这种类型的数据的数据头
 	char username_me[NAME_LENGTH];		//自已的用户名
 	char username_you[NAME_LENGTH];		//对方的用户名
-	M_client_state state;
+	unsigned char state;
 	char say_hello[7];				//hello
 	unsigned int crc;			//这段数据的crc值
-}M_say_hello;
+}M_say_hello ;
 
 #endif /* EXCHANGE_DATA_H_ */

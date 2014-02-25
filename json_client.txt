@@ -1,5 +1,5 @@
 {
-"serverip"	:	"127.0.0.1",
+"serverip"	:	"5.175.169.88",
 "serverport":	8001,
 "username"	:	"yangkun",
 "passwd"	:	"123456"
