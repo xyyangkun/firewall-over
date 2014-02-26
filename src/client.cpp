@@ -385,6 +385,13 @@ void *thr_listen_frineds(void *arg)
 				{
 					mylog_log(LOG4C_PRIORITY_ERROR,"sendto error:%s\n",strerror(errno));
 				}
+				//记录对方的端口
+				static struct query_user_info userinfo;
+				memcpy(userinfo.name, qui.name, 20);
+				userinfo.socket=sockfd;
+				userinfo.ip = cliaddr.sin_addr.s_addr;
+				userinfo.port=cliaddr.sin_port;
+
 				//新建一个udp的socket
 				sockfd = Socket(AF_INET, SOCK_DGRAM, 0);
 				if(sockfd<=0)
@@ -397,7 +404,7 @@ void *thr_listen_frineds(void *arg)
 				//通知创建成功，并开始聊天
 				//创建客户端与客户端之间的聊天线程
 				printf("create chat!!!\n\n");
-				int err = pthread_create(&ntid_chat, NULL, thr_chat_frineds,(void *)&qui);
+				int err = pthread_create(&ntid_chat, NULL, thr_chat_frineds,(void *)&userinfo);
 				if (err != 0)
 				{
 					mylog_log( LOG4C_PRIORITY_ERROR, "can't create thread: %s\n", strerror(err));
@@ -432,6 +439,7 @@ void *thr_chat_frineds(void *arg)
 	struct query_user_info user_info;
 	memcpy(&user_info, arg, sizeof(query_user_info));
 	char s[16];
+	printf("name: %s \n",user_info.name);
 	printf("char ip %s port %d\n",\
 			inet_ntop(AF_INET, &(user_info.ip), s, sizeof(s)),
 			ntohs(user_info.port));
